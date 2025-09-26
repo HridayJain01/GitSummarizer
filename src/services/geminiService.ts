@@ -13,7 +13,7 @@ class GeminiService {
 
     this.genAI = new GoogleGenerativeAI(apiKey);
     // Using a suitable model for code analysis
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' }); 
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-pro' }); 
   }
 
   private createPrompt(extractedCode: ExtractedCode): string {
