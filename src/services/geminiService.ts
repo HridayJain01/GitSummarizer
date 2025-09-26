@@ -10,17 +10,22 @@ class GeminiService {
     if (!apiKey) {
       throw new Error('Gemini API key is required');
     }
-    
+
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-pro' });
+    // Using a suitable model for code analysis
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' }); 
   }
 
   private createPrompt(extractedCode: ExtractedCode): string {
     const { repository, files } = extractedCode;
-    
+
+    // Generate an introduction based on filenames
+    const fileNames = files.map(file => file.path.split('/').pop()).join(', ');
+    const introduction = `This project contains the following key files: ${fileNames}. These files indicate that the project is likely a web-based application with components, services, and types organized for scalability and maintainability.`;
+
     // Create a condensed version of the code for analysis
     const codeSnippets = files.slice(0, 20).map(file => {
-      const truncatedContent = file.content.length > 2000 
+      const truncatedContent = file.content.length > 2000
         ? file.content.substring(0, 2000) + '...[truncated]'
         : file.content;
       
@@ -31,18 +36,22 @@ ${truncatedContent}
     }).join('\n');
 
     return `
-Analyze this GitHub repository and provide a comprehensive summary in JSON format.
+Analyze this GitHub repository and provide two types of summaries:
 
-Repository: ${repository.full_name}
-Description: ${repository.description || 'No description provided'}
-Primary Language: ${repository.language || 'Not specified'}
-Stars: ${repository.stargazers_count}
-Forks: ${repository.forks_count}
+1. **Technical Summary**:
+- Repository: ${repository.full_name}
+- Description: ${repository.description || 'No description provided'}
+- Primary Language: ${repository.language || 'Not specified'}
+- Stars: ${repository.stargazers_count}
+- Forks: ${repository.forks_count}
+
+Introduction:
+${introduction}
 
 Code Files (${files.length} total files):
 ${codeSnippets}
 
-Please provide a JSON response with the following structure:
+Please provide a JSON response with the following structure. Do not include any text before or after the JSON block.
 {
   "overview": "A comprehensive overview of what this project does and its main purpose",
   "keyFeatures": ["feature1", "feature2", "feature3"],
@@ -54,50 +63,88 @@ Please provide a JSON response with the following structure:
   "estimatedReadingTime": "X minutes"
 }
 
-Focus on:
-1. The main functionality and purpose
-2. Key technologies and frameworks used
-3. Architecture and project structure
-4. Important files and their roles
-5. Overall complexity level
-6. How someone could get started with this project
+2. **Non-Technical Summary**:
+- What this project is and its main purpose.
+- Who the target audience or users are.
+- The key features and benefits of the project.
+- The technologies or tools used, described in simple terms.
 
-Provide only the JSON response, no additional text.`;
+Provide the technical summary in JSON format enclosed in a Markdown code block like \`\`\`json... \`\`\`. Provide the non-technical summary in plain text.`;
   }
 
-  async summarizeCode(extractedCode: ExtractedCode): Promise<CodeSummary> {
+  async summarizeCode(extractedCode: ExtractedCode): Promise<{ technicalSummary: CodeSummary; nonTechnicalSummary: string }> {
     try {
       const prompt = this.createPrompt(extractedCode);
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
-      const text = response.text();
-      
-      // Try to parse the JSON response
-      const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim();
-      const summary = JSON.parse(cleanedText);
-      
-      // Validate the response structure
-      const requiredFields = ['overview', 'keyFeatures', 'techStack', 'projectStructure', 'gettingStarted', 'mainFiles', 'complexity', 'estimatedReadingTime'];
-      const missingFields = requiredFields.filter(field => !(field in summary));
-      
-      if (missingFields.length > 0) {
-        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+      const text = await response.text();
+
+      // Use a regex to find the content within the ```json...``` block
+      const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+
+      if (jsonMatch && jsonMatch[1]) {
+        const cleanedJson = jsonMatch[1];
+        
+        try {
+          const technicalSummary: CodeSummary = JSON.parse(cleanedJson);
+          
+          // Use a split to isolate the non-technical part
+          const nonTechnicalPart = text.split(/\n\n2\. \*\*Non-Technical Summary\*\*:/)[1];
+          const nonTechnicalSummary = nonTechnicalPart?.trim() || 'Non-technical summary not provided.';
+
+          return { technicalSummary, nonTechnicalSummary };
+        } catch (jsonError) {
+          console.error('Error parsing JSON:', jsonError);
+          console.error('Raw JSON part:', cleanedJson);
+
+          // Fallback if JSON parsing fails but a JSON block was found
+          return {
+            technicalSummary: {
+              overview: 'Unable to parse technical summary.',
+              keyFeatures: [],
+              techStack: [],
+              projectStructure: '',
+              gettingStarted: '',
+              mainFiles: [],
+              complexity: 'Low',
+              estimatedReadingTime: 'Unknown'
+            },
+            nonTechnicalSummary: 'An error occurred with the AI response. Please try again.'
+          };
+        }
+      } else {
+        console.error('No JSON block found in AI response.');
+        // Fallback for cases where no JSON block is returned
+        return {
+          technicalSummary: {
+            overview: 'Unable to parse technical summary.',
+            keyFeatures: [],
+            techStack: [],
+            projectStructure: '',
+            gettingStarted: '',
+            mainFiles: [],
+            complexity: 'Low',
+            estimatedReadingTime: 'Unknown'
+          },
+          nonTechnicalSummary: 'An error occurred with the AI response. Please try again.'
+        };
       }
-      
-      return summary as CodeSummary;
     } catch (error) {
       console.error('Error generating summary:', error);
       
-      // Fallback summary
+      // General fallback summaries for any other errors
       return {
-        overview: `This is a ${extractedCode.repository.language || 'software'} project with ${extractedCode.files.length} files. ${extractedCode.repository.description || 'No description available.'}`,
-        keyFeatures: ['Code analysis pending', 'Multiple file types detected'],
-        techStack: [extractedCode.repository.language || 'Unknown'].filter(Boolean),
-        projectStructure: `The project contains ${extractedCode.files.length} files organized across multiple directories.`,
-        gettingStarted: 'Clone the repository and follow the README instructions.',
-        mainFiles: extractedCode.files.slice(0, 5).map(f => f.path),
-        complexity: 'Medium' as const,
-        estimatedReadingTime: `${Math.ceil(extractedCode.files.length / 10)} minutes`
+        technicalSummary: {
+          overview: 'Unable to generate technical summary due to a service error.',
+          keyFeatures: [],
+          techStack: [],
+          projectStructure: '',
+          gettingStarted: '',
+          mainFiles: [],
+          complexity: 'Low',
+          estimatedReadingTime: 'Unknown'
+        },
+        nonTechnicalSummary: 'Unable to generate non-technical summary due to a service error.'
       };
     }
   }

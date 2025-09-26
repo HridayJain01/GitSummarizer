@@ -9,6 +9,7 @@ import { ExtractedCodeView } from './ExtractedCodeView';
 import { githubService } from '../services/githubService';
 import { geminiService } from '../services/geminiService';
 import { ExtractionOptions, ExtractedCode, CodeSummary as CodeSummaryType } from '../types/github';
+import { AISummary } from './AISummary';
 
 export const GitZen: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -36,8 +37,8 @@ export const GitZen: React.FC = () => {
 
       // Generate AI summary
       try {
-        const summary = await geminiService.summarizeCode(extracted);
-        setCodeSummary(summary);
+        const { technicalSummary } = await geminiService.summarizeCode(extracted);
+        setCodeSummary(technicalSummary);
       } catch (summaryError) {
         console.error('Failed to generate summary:', summaryError);
         // Continue without summary - the extracted code is still valuable
@@ -95,7 +96,7 @@ export const GitZen: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <GitZenHeader />
+      
       
       <div className="container mx-auto px-4 py-8">
         <RepositoryInput onSubmit={handleAnalyzeRepository} loading={loading} />
@@ -122,10 +123,13 @@ export const GitZen: React.FC = () => {
             <RepositoryInfo repository={extractedCode.repository} />
             
             {codeSummary && (
-              <CodeSummary 
-                summary={codeSummary} 
-                repositoryName={extractedCode.repository.full_name} 
-              />
+              <>
+                <CodeSummary 
+                  summary={codeSummary} 
+                  repositoryName={extractedCode.repository.full_name} 
+                />
+                <AISummary summary={codeSummary} />
+              </>
             )}
             
             <ExtractedCodeView extractedCode={extractedCode} />
