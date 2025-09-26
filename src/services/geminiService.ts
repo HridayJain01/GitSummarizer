@@ -60,7 +60,8 @@ Please provide a JSON response with the following structure. Do not include any 
   "gettingStarted": "Brief guide on how to get started with this project",
   "mainFiles": ["important_file1.js", "important_file2.py"],
   "complexity": "Low|Medium|High",
-  "estimatedReadingTime": "X minutes"
+  "estimatedReadingTime": "X minutes",
+  "futureScope": "Potential future improvements or extensions for this project"
 }
 
 2. **Non-Technical Summary**:
@@ -107,7 +108,8 @@ Provide the technical summary in JSON format enclosed in a Markdown code block l
               gettingStarted: '',
               mainFiles: [],
               complexity: 'Low',
-              estimatedReadingTime: 'Unknown'
+              estimatedReadingTime: 'Unknown',
+              futureScope: 'No future scope provided.'
             },
             nonTechnicalSummary: 'An error occurred with the AI response. Please try again.'
           };
@@ -124,7 +126,8 @@ Provide the technical summary in JSON format enclosed in a Markdown code block l
             gettingStarted: '',
             mainFiles: [],
             complexity: 'Low',
-            estimatedReadingTime: 'Unknown'
+            estimatedReadingTime: 'Unknown',
+            futureScope: 'No future scope provided.'
           },
           nonTechnicalSummary: 'An error occurred with the AI response. Please try again.'
         };
@@ -142,7 +145,8 @@ Provide the technical summary in JSON format enclosed in a Markdown code block l
           gettingStarted: '',
           mainFiles: [],
           complexity: 'Low',
-          estimatedReadingTime: 'Unknown'
+          estimatedReadingTime: 'Unknown',
+          futureScope: 'No future scope provided.'
         },
         nonTechnicalSummary: 'Unable to generate non-technical summary due to a service error.'
       };

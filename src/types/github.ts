@@ -57,4 +57,5 @@ export interface CodeSummary {
   mainFiles: string[];
   complexity: 'Low' | 'Medium' | 'High';
   estimatedReadingTime: string;
+  futureScope: string; // Added new property for future scope suggestions
 }
