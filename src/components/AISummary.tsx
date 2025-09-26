@@ -10,7 +10,7 @@ export const AISummary: React.FC<{ summaries: Summaries | null }> = ({ summaries
   if (!summaries) {
     return (
       <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <h3 className="text-2xl font-bold text-gray-800 mb-4">AI Summary of Project</h3>
+        <h3 className="text-2xl font-bold text-gray-800 mb-4">Roadmap of Project</h3>
         <p className="text-gray-600">No summary available. Try generating again.</p>
       </div>
     );
